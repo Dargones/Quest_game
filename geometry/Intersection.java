@@ -25,10 +25,10 @@ public class Intersection {
             return null;
         // the following solution only works if l1.a == 0
         if (l1.a == 0)
-            return new MyPoint(round(((l1.c * l2.b) / l1.b - l2.c) / l2.a),round (-l1.c / l1.b));
+            return new MyPoint(((l1.c * l2.b) / l1.b - l2.c) / l2.a,-l1.c / l1.b);
         // the following is the most general case
         double y = (-l2.c + (l2.a / l1.a) * l1.c) / (- (l2.a / l1.a) * l1.b + l2.b);
-        return new MyPoint(round((-l1.b * y - l1.c) / l1.a), round(y));
+        return new MyPoint((-l1.b * y - l1.c) / l1.a, y);
     }
 
     /**
@@ -49,7 +49,7 @@ public class Intersection {
                 return null;
             MyPoint[] result = new MyPoint[roots.length];
             for (int i = 0; i < roots.length; i ++) 
-                result[i] = new MyPoint(round(-line.b * roots[i] /line.a - line.c/line.a), round(roots[i]));
+                result[i] = new MyPoint(-line.b * roots[i] /line.a - line.c/line.a, roots[i]);
             return result;
         } else {
             //b, anc c that follow are the coefficient in the quadratic equation for x (a = 1):
@@ -60,7 +60,7 @@ public class Intersection {
                 return null;
             MyPoint[] result = new MyPoint[roots.length];
             for (int i = 0; i < roots.length; i ++)
-                result[i] = new MyPoint(round(roots[i]), round(-line.c / line.b));
+                result[i] = new MyPoint(roots[i], -line.c / line.b);
             return result;
         }
     }
@@ -70,14 +70,13 @@ public class Intersection {
         MyPoint[] hypo = intersectCircleAndLine(origin, radiusSqMinusCoordSq, new AlgebraicLine(s));
         if (hypo == null)
             return null;
-        if ((hypo[0].x <= Math.min(s.p1.x, s.p2.x)) || (hypo[0].x >= Math.max(s.p1.x, s.p2.x))) {
-            if ((hypo.length > 1)&&((hypo[1].x <= Math.min(s.p1.x, s.p2.x)) || (hypo[1].x >= Math.max(s.p1.x, s.p2.x))))
-                //TODO should you check y-s?
+        if (pointIsIn(hypo[0], s)) {
+            if ((hypo.length > 1) && pointIsIn(hypo[1], s))
                 return hypo;
             else
                 return new MyPoint[]{hypo[0]};
         } else {
-            if ((hypo.length > 1)&&(hypo[1].x <= Math.min(s.p1.x, s.p2.x)) || (hypo[1].x >= Math.max(s.p1.x, s.p2.x)))
+            if ((hypo.length > 1) && pointIsIn(hypo[1], s))
                 return new MyPoint[]{hypo[1]};
             else
                 return null;
@@ -86,26 +85,15 @@ public class Intersection {
     
     
     public static MyPoint intersectSegmentAndSegment(LineSegment s1, LineSegment s2) {
-        LineSegment sector = new LineSegment(new MyPoint(Math.max(Math.min(s1.p1.x, s1.p2.x), Math.min(s2.p1.x, s2.p2.x)),
-                Math.max(Math.min(s1.p1.y, s1.p2.y), Math.min(s2.p1.y, s2.p2.y))),
-                new MyPoint(Math.min(Math.max(s1.p1.x, s1.p2.x), Math.max(s2.p1.x, s2.p2.x)),
-                Math.min(Math.max(s1.p1.y, s1.p2.y), Math.max(s2.p1.y, s2.p2.y))));
-        if ((sector.p1.x > sector.p2.x) || (sector.p1.y > sector.p2.y))
-            return null;
         MyPoint hypo = intersectLineAndLine(new AlgebraicLine(s1), new AlgebraicLine(s2));
         if (hypo == null) return null;
-        if ((hypo.x < sector.p1.x) || (hypo.x > sector.p2.x) || (hypo.y < sector.p1.y) || (hypo.y > sector.p2.y))
-            return null;
-        return hypo;
+        return (pointIsIn(hypo, s1) && pointIsIn(hypo,s2))? hypo: null;
     }
 
     public static MyPoint intersectRayAndSegment(Ray r, LineSegment s) {
         MyPoint hypo = intersectLineAndLine(new AlgebraicLine(s), r.line);
         if (hypo == null) return null;
-        if ((hypo.x < Math.min(s.p1.x, s.p2.x)) || (hypo.x > Math.max(s.p1.x, s.p2.x)) ||
-                (hypo.y < Math.min(s.p1.y, s.p2.y)) || (hypo.y > Math.max(s.p1.y, s.p2.y))|| !r.correctDirection(hypo))
-            return null;
-        return hypo;
+        return (pointIsIn(hypo, s) && r.correctDirection(hypo))? hypo: null;
     }
 
 
@@ -133,14 +121,23 @@ public class Intersection {
     }
 
     /**
-     * Rounds double to the nearest integer
-     * @param d
+     * Chechks whethere a point belongs to a segment. PRECONDITION; The point lies on the line that is associated with
+     * the segment
+     * @param point
+     * @param segment
      * @return
      */
-    private static int round (double d) {
-        if (d > 0) return (int) (d + 0.5);
-        return (int) (d - 0.5);
+    private static boolean pointIsIn (MyPoint point, LineSegment segment) {
+        if (segment.p1.x == segment.p2.x) {
+            if (segment.p1.y > segment.p2.y)
+                return ((point.y <= segment.p1.y) && (point.y >= segment.p2.y));
+            return ((point.y <= segment.p2.y) && (point.y >= segment.p1.y));
+        }
+        if (segment.p1.x > segment.p2.x)
+            return ((point.x <= segment.p1.x) && (point.x >= segment.p2.x));
+        return ((point.x <= segment.p2.x) && (point.x >= segment.p1.x));
     }
+
 
     public static void main (String args[]) {
         System.out.println("This is the debug run of Intersection.java");

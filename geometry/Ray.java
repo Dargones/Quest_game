@@ -99,6 +99,8 @@ public class Ray {
      * @return
      */
     public boolean isIn(double leftAngle, double rightAngle) {
+        if (leftAngle == rightAngle)
+            return angle == rightAngle;
         if (leftAngle > rightAngle)
             return (angle <= leftAngle) && (angle >= rightAngle);
         else return (angle <= leftAngle) || (angle >= rightAngle); // in this second case the arc restricted by

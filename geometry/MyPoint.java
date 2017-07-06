@@ -19,12 +19,22 @@ public class MyPoint {
     }
 
     /**
+     * Basic constructor
+     * @param x
+     * @param y
+     */
+    public MyPoint(double x, double y) {
+        this.x = round(x);
+        this.y = round(y);
+    }
+
+    /**
      * Euclidean distance
      * @param otherPoint
      * @return
      */
     public double distance(MyPoint otherPoint) {
-        return Math.sqrt((double)(x * x + y * y));
+        return Math.sqrt(Math.pow(x - otherPoint.x, 2)+Math.pow(y - otherPoint.y, 2));
     }
 
     /**
@@ -48,4 +58,13 @@ public class MyPoint {
         return ((this.x == otherPoint.x)&&(this.y == otherPoint.y));
     }
 
+    /**
+     * Rounds double to the nearest integer
+     * @param d
+     * @return
+     */
+    private static int round (double d) {
+        if (d > 0) return (int) (d + 0.5);
+        return (int) (d - 0.5);
+    }
 }
