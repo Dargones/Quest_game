@@ -16,7 +16,7 @@ import java.awt.event.MouseMotionListener;
 public class Main extends JPanel implements MouseMotionListener, KeyListener{
     public static double VIEW_RADIUS = 700;
     public static double ANGLE_DIFFERENCE = Math.PI/2;
-    public static double SPEED = 5;
+    public static double SPEED = 2;
     public Sector[] s;
     public MyPoint position, mouse;
     public int goY;
@@ -42,8 +42,8 @@ public class Main extends JPanel implements MouseMotionListener, KeyListener{
         addKeyListener(this);
         setFocusable(true);
 
-        position = new MyPoint(90,98);
-        mouse = new MyPoint(90,100);
+        position = new MyPoint(475,440);
+        mouse = new MyPoint(475,450);
         goY = 0;
         goX = 0;
 
@@ -157,7 +157,7 @@ public class Main extends JPanel implements MouseMotionListener, KeyListener{
         for (int i = 0; i < edges.length; i++)
             s[i] = new Sector(edges[i], space);
 
-        homeSector = s[0];
+        homeSector = s[25];
 
         edges[0][0] = new Edge(s[0],null, p01, p02, EdgeType.WALL);
         edges[0][1] = new Edge(s[0],null, p02, p06, EdgeType.WALL);
@@ -406,6 +406,7 @@ public class Main extends JPanel implements MouseMotionListener, KeyListener{
 
         for (int i = 0; i < s.length; i++)
             for (int j = 0; j < s[i].edges.length; j++)
+                if ((i == 0) && (j == 0))
                     s[i].edges[j].paint(g);
         for (int i = 0; i < s.length; i++)
             for (int j = 0; j < s[i].edges.length; j++)

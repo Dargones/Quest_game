@@ -98,6 +98,8 @@ public class Sector {
     
     private void drawSector(MyPoint from, double radius, double radiusSqMinusCoordSq, Ray rayLeft, Ray rayRight, Edge previous) {
         for (int i = 0; i < edges.length; i++) {
+            if (edges[i] == previous)
+                continue;
             LineSegment segment = checkDistanceOfSight(edges[i].segment, from, radius, radiusSqMinusCoordSq);
             if (segment == null) continue;
             segment = checkAreaOfSight(segment, from, rayLeft, rayRight);
@@ -108,7 +110,7 @@ public class Sector {
             if (edges[i].getType() != EdgeType.PSEUDO)
                 edges[i].update(segment);
 
-            if ((edges[i].getType().visThrough)&&(edges[i] != previous)) {
+            if (edges[i].getType().visThrough) {
                 if (edges[i].sectorOne == this)
                     edges[i].sectorTwo.drawSector(from, radius, radiusSqMinusCoordSq, newRayLeft, newRayRight, edges[i]);
                 else
