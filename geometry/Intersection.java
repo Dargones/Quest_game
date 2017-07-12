@@ -34,7 +34,10 @@ public class Intersection {
     /**
      * finds all the points, where a line and a circle intersect
      * @param origin
-     * @param radiusSqMinusCoordSq
+     * @param radiusSqMinusCoordSq radius of the circle squared minus the squared coordinates of the origin. (It makes
+     *                             sense to precalculate this value if the same circle is to be intersected multiple
+     *                             times). Example: if the circle has the radius 5 and the origin (4,6), then this
+     *                             parameter should be equal to 25 - (16 + 36) = -27
      * @param line
      * @return
      */
