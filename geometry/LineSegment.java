@@ -20,4 +20,13 @@ public class LineSegment {
         this.p1 = p1;
         this.p2 = p2;
     }
+
+    /**
+     * Returns the middle of the segment
+     * @return
+     */
+    public MyPoint middle() {
+        return MyPoint.midPoint(p1, p2);
+    }
+
 }

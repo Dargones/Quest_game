@@ -1,6 +1,10 @@
 package graph;
 
-import geometry.*;
+
+import geometry.Geometry;
+import geometry.LineSegment;
+import geometry.MyPoint;
+import geometry.Ray;
 
 import java.awt.*;
 
@@ -11,21 +15,51 @@ import java.awt.*;
 public class Sector {
     public Space parent; // the space that this Sector belongs two
     private Edge[] edges; // the edges that separate this Sector from the others
+    public MyPoint center;
+
+
+    /**
+     * Basic constructor. Nothing special
+     */
+    public Sector(Edge[] edges) {
+        this.edges = edges;
+        parent = null;
+    }
 
     /**
      * Basic constructor. Nothing special
      */
     public Sector() {
-        edges = null;
-        parent = null;
+        this(null);
+    }
+
+    public Edge[] getEdges() {
+        return edges;
     }
 
     public void setEdges(Edge[] edges) {
         this.edges = edges;
+        double x = 0;
+        double y = 0;
+        for (Edge edge: edges) {
+            x += edge.segment.p1.x + edge.segment.p2.x;
+            y += edge.segment.p1.y + edge.segment.p2.y;
+        }
+        center = new MyPoint(x / (2 * edges.length), y / (2 * edges.length));
+        for (int i = 0; i < edges.length - 2; i++) {
+            int j = 1;
+            while ((!edges[i].segment.p1.equals(edges[i + 1].segment.p1))&&(!edges[i].segment.p1.equals(edges[i + 1].segment.p2))
+                &&(!edges[i].segment.p2.equals(edges[i + 1].segment.p1))&&(!edges[i].segment.p2.equals(edges[i + 1].segment.p2))) {
+                Edge tmp = edges[i + 1];
+                edges[i + 1] = edges[i + 1 + j];
+                edges[i + 1 + j] = tmp;
+                j ++;
+            }
+        }
     }
 
-    public void setParent(Edge[] edges) {
-        this.edges = edges;
+    public void calculateDistances() {
+
     }
 
     public void drawSector(MyPoint from, double radius, Ray rayLeft, Ray rayRight) {
@@ -46,43 +80,12 @@ public class Sector {
             edges[i].update(segment);
 
             if (edges[i].getType().visThrough) {
-                if (edges[i].sectorOne == this)
+                if ((edges[i].sectorOne == this)||(Map.mergedIn(this, edges[i].sectorOne)))
                     edges[i].sectorTwo.drawSector(from, radius, radiusSqMinusCoordSq, newRayLeft, newRayRight, edges[i]);
                 else
                     edges[i].sectorOne.drawSector(from, radius, radiusSqMinusCoordSq, newRayLeft, newRayRight, edges[i]);
             }
         }
-    }
-
-
-    public Sector sectorChange(MyPoint oldPosition, MyPoint newPosition) {
-        return sectorChange(oldPosition, newPosition, null);
-    }
-
-    public Sector sectorChange(MyPoint oldPosition, MyPoint newPosition, Edge previous) {
-        //TODO Allow being inside two or more sectors at once
-        //TODO Manage Stackoverflow error that appears here
-        for (int i = 0; i<  edges.length; i ++) {
-            if (edges[i] == previous)
-                continue;
-            MyPoint intersection = Intersection.intersectSegmentAndSegment(edges[i].segment, new LineSegment(oldPosition, newPosition));
-            if (intersection == null)
-                continue;
-            if (intersection.equals(newPosition))
-                return null;
-            if (edges[i].sectorOne == this) {
-                if ((edges[i].sectorTwo == null)|| !edges[i].getType().goThrough)
-                    return null;
-                else
-                    return edges[i].sectorTwo.sectorChange(oldPosition,newPosition,edges[i]);
-            } else {
-                if ((edges[i].sectorOne == null)|| !edges[i].getType().goThrough)
-                    return null;
-                else
-                    return edges[i].sectorOne.sectorChange(oldPosition,newPosition,edges[i]);
-            }
-        }
-        return this;
     }
 
     public void paint(Graphics2D g) {

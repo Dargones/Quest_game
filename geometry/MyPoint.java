@@ -38,6 +38,16 @@ public class MyPoint {
     }
 
     /**
+     * Returns the midpoint between the two given points
+     * @param pt1
+     * @param pt2
+     * @return
+     */
+    public static MyPoint midPoint(MyPoint pt1, MyPoint pt2) {
+        return new MyPoint((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) /2);
+    }
+
+    /**
      * For the purposes of debug
      * @return
      */

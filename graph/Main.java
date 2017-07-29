@@ -12,8 +12,8 @@ import java.awt.event.MouseMotionListener;
 /**
  * Created by alexanderfedchin on 4/30/17.
  */
-public class Main extends JPanel implements MouseMotionListener, KeyListener{
-    private static int SPEED = 5;
+public class Main extends JPanel implements MouseMotionListener, KeyListener {
+    private static int SPEED = 1;
     private int goY;
     private int goX;
     private Map map;

@@ -9,7 +9,7 @@ public class Space{
     private Sector[] added;
     private Space[] children;
     public Space parent;
-    private String name;
+    public String name;
 
     public Space(String name, Sector[] added, Space[] children) {
         this.added = added;

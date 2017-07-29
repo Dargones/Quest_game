@@ -39,7 +39,7 @@ public class Intersection {
      *                             times). Example: if the circle has the radius 5 and the origin (4,6), then this
      *                             parameter should be equal to 25 - (16 + 36) = -27
      * @param line
-     * @return
+     * @return the array of points. If there are no such points, returns null
      */
     public static MyPoint[] intersectCircleAndLine(MyPoint origin, double radiusSqMinusCoordSq, AlgebraicLine line) {
         if (line.a != 0) {
@@ -68,7 +68,14 @@ public class Intersection {
         }
     }
 
-    
+
+    /**
+     * finds all points where a circle and a segment intersect
+     * @param origin the origin of a circle
+     * @param radiusSqMinusCoordSq see intersectCircleAndLine documentation for this one
+     * @param s the segment
+     * @return
+     */
     public static MyPoint[] intersectCircleAndSegment(MyPoint origin, double radiusSqMinusCoordSq, LineSegment s) {
         MyPoint[] hypo = intersectCircleAndLine(origin, radiusSqMinusCoordSq, new AlgebraicLine(s));
         if (hypo == null)
@@ -92,6 +99,7 @@ public class Intersection {
         if (hypo == null) return null;
         return (pointIsIn(hypo, s1) && pointIsIn(hypo,s2))? hypo: null;
     }
+
 
     public static MyPoint intersectRayAndSegment(Ray r, LineSegment s) {
         MyPoint hypo = intersectLineAndLine(new AlgebraicLine(s), r.line);
@@ -131,14 +139,14 @@ public class Intersection {
      * @return
      */
     private static boolean pointIsIn (MyPoint point, LineSegment segment) {
-        if (segment.p1.x == segment.p2.x) {
+        if (segment.p1.x > segment.p2.x) {
             if (segment.p1.y > segment.p2.y)
-                return ((point.y <= segment.p1.y) && (point.y >= segment.p2.y));
-            return ((point.y <= segment.p2.y) && (point.y >= segment.p1.y));
+                return ((point.y <= segment.p1.y) && (point.y >= segment.p2.y) && (point.x <= segment.p1.x) && (point.x >= segment.p2.x));
+            return ((point.y <= segment.p2.y) && (point.y >= segment.p1.y) && (point.x <= segment.p1.x) && (point.x >= segment.p2.x));
         }
-        if (segment.p1.x > segment.p2.x)
-            return ((point.x <= segment.p1.x) && (point.x >= segment.p2.x));
-        return ((point.x <= segment.p2.x) && (point.x >= segment.p1.x));
+        if (segment.p1.y > segment.p2.y)
+            return ((point.y <= segment.p1.y) && (point.y >= segment.p2.y) && (point.x <= segment.p2.x) && (point.x >= segment.p1.x));
+        return ((point.y <= segment.p2.y) && (point.y >= segment.p1.y) && (point.x <= segment.p2.x) && (point.x >= segment.p1.x));
     }
 
 
