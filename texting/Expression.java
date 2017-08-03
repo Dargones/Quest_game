@@ -1,8 +1,10 @@
 package texting;
 
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Stack;
+
 
 /**
  * Created by alexanderfedchin on 7/24/17.
@@ -24,16 +26,27 @@ public class Expression {
 
 
     public String evaluate(GameObject obj) {
-        Stack<String> vars = getVars(obj.variables);
-        for (int i = 0; i < ops.length; i++) {
-            Operator operator = ops[i];
-            String[] pars = new String[operator.numberOfParameters];
-            for (int j = 0; j < pars.length; j++)
-                pars[j] = vars.pop();
-            vars.add(operator.func.evaluate(obj, pars));
+        Stack<String> values = new Stack();
+        int varsP = 0;
+        int constP = 0;
+        int opP = 0;
+        int index = 0;
+        while (opP != ops.length) {
+            if ((varsP != varsIndexes.length) && (varsIndexes[varsP].p == index))
+                values.add(obj.variables[varsIndexes[varsP++].o].value);
+            else if ((constP != constants.length) && (constants[constP].p == index))
+                values.add(constants[constP++].o.value);
+            else {
+                String[] pars = new String[ops[opP].numberOfParameters];
+                for (int j = pars.length - 1; j >= 0; j--)
+                    pars[j] = values.pop();
+                values.add(ops[opP++].func.evaluate(obj, pars));
+            }
+            index ++;
         }
-        return vars.pop();
+        return values.pop();
     }
+
 
     public boolean evaluateCondition(GameObject obj) {
         if (ops[ops.length - 1].returnType != Type.BOOLEAN) {
@@ -43,18 +56,6 @@ public class Expression {
         return evaluate(obj) == TRUE;
     }
 
-    private Stack<String> getVars(Variable[] objVars) {
-        Stack<String> result =  new Stack<>();
-        int varsP = varsIndexes.length;
-        int constP = constants.length;
-        while ((varsP != 0) || (constP != 0)) {
-            if ((constP == 0) || (varsIndexes[varsP].p > constants[constP].p))
-                result.add(objVars[varsIndexes[varsP].o].value);
-            else
-                result.add(constants[constP].o.value);
-        }
-        return result;
-    }
 
     /**
      * A function taht takes an array of Tokens (of Variables or Operators that are named) that is sorted by the name
@@ -86,6 +87,7 @@ public class Expression {
         return -1;
     }
 
+
     /**
      * This class processes the String and separates it into tokens. Tokens can be of 5 types:
      * - other Tokens (these are what is separated by the parenthesis)
@@ -101,13 +103,12 @@ public class Expression {
      * the class also has convertToPostfix method that transformes everything using the postfix notation
      */
     private class Tokenizer {
-        //TODO rewrite all the system in a way that at first all the tokens get separated, with operators' priorities
         //being defined. Based on this the correct parameter types for the operators should be calculated.
         ArrayList<Tokenizer> tokens;
         ArrayList<Integer> vars;
         ArrayList<Variable> constants;
-        ArrayList<Operator.OpWithPriority> ops;
-        ArrayList<Operator> funcs;
+        ArrayList<Integer> ops;
+        ArrayList<IndexedPair<Operator[]>> funcs;
         ArrayList<TokenType> orderArray;
 
         //the following variables are only needed during the tokenizing and are insignificant then extracting the
@@ -162,9 +163,6 @@ public class Expression {
         private void processNextCharacter(String expression, Variable[] objVars, Operator[] objOps) {
             char ch = expression.charAt(i);
 
-            TokenType oldT = currentT;
-            int oldStart = separationStart;
-            boolean callExtract = false;
             if (currentT == TokenType.TOKEN) { //if the pointer is inside a token that is to be separated
                 if (insideAString) {
                     if (ch == '\"')
@@ -174,24 +172,28 @@ public class Expression {
                 } else if (ch == ')') {
                     countBrackets --;
                     if (countBrackets == 0) {
-                        //extractToken(currentT, expression, separationStart, i, objVars, objOps);
-                        callExtract = true;
+                        extractToken(currentT, expression, separationStart, i, objVars, objOps);
                         currentT = null;
                     }
                 } else if (ch == ',') {
                     if (countBrackets == 1) {
-                        //extractToken(currentT, expression, separationStart, i, objVars, objOps);
-                        callExtract = true;
+                        extractToken(currentT, expression, separationStart, i, objVars, objOps);
                         separationStart = i + 1;
                     }
                 } else if (ch == '\"')
                     insideAString = true;
-            } else if (currentT == TokenType.CONSTANT) { //if the pointer is inside a constant (not of the BOOLEAN type)
-                if ((insideAString) && (ch == '\"')) {
-                    callExtract = true;
-                    currentT = null;
-                } else if ((!insideAString) && ((ch != '0') && ((ch <= '1') || (ch >= '9')))) {
-                    callExtract = true;
+                i++;
+                return;
+            }
+
+            if (currentT == TokenType.CONSTANT) { //if the pointer is inside a constant (not of the BOOLEAN type)
+                if (insideAString) {
+                    if (ch == '\"') {
+                        extractToken(currentT, expression, separationStart, i, objVars, objOps);
+                        currentT = null;
+                    }
+                } else if ((ch != '0') && ((ch < '1') || (ch > '9'))) {
+                    extractToken(currentT, expression, separationStart, i, objVars, objOps);
                     if (((ch <= 'z') && (ch >= 'a')) || ((ch <= 'Z') && (ch >= 'A')))
                         currentT = TokenType.VARIABLE;
                     else if (ch == ' ')
@@ -200,204 +202,76 @@ public class Expression {
                         currentT = TokenType.OPERATOR;
                     separationStart = i;
                 }
-            } else {
-                switch (ch) {
-                    case '(': { //opening parenthesis (TOKEN type)
-                        if (currentT != null) {
-                            //extractToken(currentT, expression, separationStart, i, objVars, objOps);
-                            callExtract = true;
-                        }
-                        currentT = TokenType.TOKEN;
-                        //the i increment and how to deal with it?
-                        separationStart = i + 1;
-                        countBrackets = 1;
-                        break;
+                i++;
+                return;
+            }
+
+            switch (ch) {
+                case '(': { //opening parenthesis (TOKEN type)
+                    if (currentT != null)
+                        extractToken(currentT, expression, separationStart, i, objVars, objOps);
+                    currentT = TokenType.TOKEN;
+                    //the i increment and how to deal with it?
+                    separationStart = i + 1;
+                    countBrackets = 1;
+                    break;
+                }
+                case '\"': { //opening quotation mark (constant of type String)
+                    if (currentT != null)
+                        extractToken(currentT, expression, separationStart, i, objVars, objOps);
+                    currentT = TokenType.CONSTANT;
+                    separationStart = i + 1;
+                    insideAString = true;
+                    break;
+                }
+                case ' ': { // may signify the end of the variable/operator/function name
+                    if (currentT != null) {
+                        extractToken(currentT, expression, separationStart, i, objVars, objOps);
+                        currentT = null;
                     }
-                    case '\"': { //opening quotation mark (constant of type String)
-                        if (currentT != null) {
-                            //extractToken(currentT, expression, separationStart, i, objVars, objOps);
-                            callExtract = true;
-                        }
-                        currentT = TokenType.CONSTANT;
-                        separationStart = i + 1;
-                        insideAString = true;
-                        break;
-                    }
-                    case ' ': { // may signify the end of the variable/operator/function name
-                        if (currentT != null) {
-                            //extractToken(currentT, expression, separationStart, i, objVars, objOps);
-                            callExtract = true;
-                            currentT = null;
-                        }
-                        separationStart = i + 1;
-                        break;
-                    }
-                    default: { // not inside a token or a string constant and not a space, that is one of the following:
+                    separationStart = i + 1;
+                    break;
+                }
+                default: { // not inside a token or a string constant and not a space, that is one of the following:
                         // - a part of spelling of variable name, operator or a constant (of BOOLEAN or INTEGER type).
                         // constants of the integer type may only begin here
-                        if ((ch == '0') || (ch >= '1') && (ch <= '9')) {
-                            if (currentT == null) {
-                                currentT = TokenType.CONSTANT;
-                                insideAString = false;
-                                separationStart = i;
-                            } else if (currentT == TokenType.OPERATOR) {
-                                callExtract = true;
-                                //extractToken(currentT, expression, separationStart, i, objVars, objOps);
-                                currentT = TokenType.CONSTANT;
-                                insideAString = false;
-                                separationStart = i;
-                            }
-                            break;
+                    if ((ch == '0') || (ch >= '1') && (ch <= '9')) {
+                        if (currentT == null) {
+                            currentT = TokenType.CONSTANT;
+                            insideAString = false;
+                            separationStart = i;
+                        } else if (currentT == TokenType.OPERATOR) {
+                            extractToken(currentT, expression, separationStart, i, objVars, objOps);
+                            currentT = TokenType.CONSTANT;
+                            insideAString = false;
+                            separationStart = i;
                         }
-                        //Now the only possibility are appending to a variable/operator and possibly finishing one
-                        if (((ch <= 'z') && (ch >= 'a')) || ((ch <= 'Z') && (ch >= 'A'))) {
-                            if (currentT == TokenType.OPERATOR) {
-                                callExtract = true;
-                                //extractToken(currentT, expression, separationStart, i, objVars, objOps);
-                                currentT = TokenType.VARIABLE;
-                                separationStart = i;
-                            } else if (currentT == null) {
-                                currentT = TokenType.VARIABLE;
-                                separationStart = i;
-                            }
-                        } else {
-                            //This is appending to an operator
-                            if (currentT == TokenType.VARIABLE) {
-                                callExtract = true;
-                                //extractToken(currentT, expression, separationStart, i, objVars, objOps);
-                                currentT = TokenType.OPERATOR;
-                                separationStart = i;
-                            } else if (currentT == null) {
-                                currentT = TokenType.OPERATOR;
-                                separationStart = i;
-                            }
+                        break;
+                    }
+                    //Now the only possibility are appending to a variable/operator and possibly finishing one
+                    if (((ch <= 'z') && (ch >= 'a')) || ((ch <= 'Z') && (ch >= 'A'))) {
+                        if (currentT == TokenType.OPERATOR) {
+                            extractToken(currentT, expression, separationStart, i, objVars, objOps);
+                            currentT = TokenType.VARIABLE;
+                            separationStart = i;
+                        } else if (currentT == null) {
+                            currentT = TokenType.VARIABLE;
+                            separationStart = i;
+                        }
+                    } else {
+                        //This is appending to an operator
+                        if (currentT == TokenType.VARIABLE) {
+                            extractToken(currentT, expression, separationStart, i, objVars, objOps);
+                            currentT = TokenType.OPERATOR;
+                            separationStart = i;
+                        } else if (currentT == null) {
+                            currentT = TokenType.OPERATOR;
+                            separationStart = i;
                         }
                     }
                 }
             }
             i++;
-            if (callExtract)
-                extractToken(oldT, expression, oldStart, i - 1, objVars, objOps);
-        }
-
-
-        private Type getTypeAndMakePostfix(Variable[] objVars) {
-            if (returnType != null)
-                return returnType;
-            int operatorsTotal = ops.size() + funcs.size();
-            int constantsTotal = constants.size();
-            int variableTotal = vars.size();
-            for (Tokenizer t: tokens) {
-                operatorsTotal += t.operatorsFinal.length;
-                constantsTotal += t.constantsFinal.length;
-                variableTotal += t.varsFinal.length;
-            }
-            varsFinal = new IndexedPair[variableTotal];
-            operatorsFinal = new Operator[operatorsTotal];
-            constantsFinal = new IndexedPair[constantsTotal];
-
-            LinkedList<Operator.OpWithPriority> opStack = new LinkedList<>();
-            int j = 0;
-            int constI = 0;
-            int opI = 0;
-            int varI = 0;
-            int funcI = 0;
-            int tokI = 0;
-
-            int opFinalI = 0;
-            int varFinalI = 0;
-            int constFinalI = 0;
-
-            boolean unaryOperatorMet = false;
-            int tokensBeforeFunction = -1;
-            Operator function = null;
-            while (j < orderArray.size()) {
-                switch (orderArray.get(j)) {
-                    case CONSTANT: {
-                        constantsFinal[constFinalI ++] = new IndexedPair<>(constants.get(constI ++), constFinalI + varFinalI);
-                        if (unaryOperatorMet) {
-                            operatorsFinal[opFinalI++] = opStack.pop().o;
-                            unaryOperatorMet = false;
-                        }
-                        break;
-                    }
-                    case OPERATOR: {
-                        Operator.OpWithPriority nextOperator = ops.get(opI++);
-                        if ((opStack.isEmpty())||(nextOperator.p < opStack.peek().p))
-                            opStack.add(nextOperator);
-                        else {
-                            operatorsFinal[opFinalI ++] = opStack.pop().o;
-                            opStack.add(nextOperator);
-                        }
-                        if (nextOperator.o.numberOfParameters == 1)
-                            unaryOperatorMet = true;
-                        break;
-                    }
-                    case VARIABLE: {
-                        varsFinal[varFinalI ++] = new IndexedPair<>(vars.get(varI ++), constFinalI + varFinalI);
-                        if (unaryOperatorMet) {
-                            operatorsFinal[opFinalI++] = opStack.pop().o;
-                            unaryOperatorMet = false;
-                        }
-                        break;
-                    }
-                    case FUNCTION: {
-                        function = funcs.get(funcI ++);
-                        tokensBeforeFunction = function.numberOfParameters;
-                        break;
-                    }
-                    case TOKEN: {
-                        Tokenizer thisToken = tokens.get(tokI++);
-                        for (Operator o: thisToken.operatorsFinal)
-                            operatorsFinal[opFinalI ++] = o;
-                        int lastIndex = varFinalI + constFinalI;
-                        for (IndexedPair<Integer> i: thisToken.varsFinal)
-                            varsFinal[varFinalI ++] = new IndexedPair<>(i.o, i.p + lastIndex);
-                        for (IndexedPair<Variable> i: thisToken.constantsFinal)
-                            constantsFinal[constFinalI ++] = new IndexedPair<>(i.o, i.p + lastIndex);
-                        if (tokensBeforeFunction > -1) {
-                            tokensBeforeFunction --;
-                            if (tokensBeforeFunction == 0) {
-                                operatorsFinal[opFinalI ++] = function;
-                                tokensBeforeFunction = -1;
-                            }
-                        } else if (unaryOperatorMet) {
-                            operatorsFinal[opFinalI++] = opStack.pop().o;
-                            unaryOperatorMet = false;
-                        }
-                        break;
-                    }
-                }
-                j++;
-            }
-            while (!opStack.isEmpty())
-                operatorsFinal[opFinalI ++] = opStack.pop().o;
-            if (operatorsTotal == 0) {
-                if (constantsTotal == 0)
-                    returnType = objVars[varsFinal[0].o].type;
-                else
-                    returnType = constantsFinal[0].o.type;
-            } else
-                returnType = operatorsFinal[operatorsTotal -1].returnType;
-            return returnType;
-        }
-        
-        
-        private Type getLastTokenType (TokenType tokenType, Variable[] objVars) {
-            switch (tokenType) {
-                case VARIABLE:
-                    return objVars[vars.get(vars.size() - 1)].type;
-                case TOKEN:
-                    return tokens.get(tokens.size() - 1).getTypeAndMakePostfix(objVars);
-                case CONSTANT:
-                    return  constants.get(constants.size() - 1).type;
-                case FUNCTION:
-                    return funcs.get(funcs.size() - 1).returnType;
-                case OPERATOR:
-                    return ops.get(ops.size() - 1).o.returnType;
-                default:
-                    return null;
-            }
         }
 
 
@@ -421,73 +295,17 @@ public class Expression {
                 }
                 case OPERATOR: {
                     int opIndex = getIndex(Operator.STANDART, str);
-                    ops.add(Operator.STANDART[opIndex]);
-                    boolean isUnary = false;
-                    Type previousTokenType = null;
+                    int numberOfParameters = 2;
                     if ((orderArray.size() == 1) || (orderArray.get(orderArray.size() - 2) == TokenType.OPERATOR))
-                        isUnary = true;
-                    else {
-                        int j = orderArray.size() - 2;
-                        int opI = ops.size() - 2;
-                        Operator.OpWithPriority chosen = null;
-                        while (j >= 0) {
-                            if (orderArray.get(j) == TokenType.OPERATOR) {
-                                if (ops.get(opI).p >= Operator.STANDART[opIndex].p)
-                                    break;
-                                else if ((chosen == null) || (chosen.p < ops.get(opI).p))
-                                    chosen = ops.get(opI);
-                            }
-                            j--;
-                        }
-                        if (chosen != null)
-                            previousTokenType = chosen.o.returnType;
+                        numberOfParameters = 1;
+                    boolean thisIstheRightFunction = false;
+                    do {
+                        if (Operator.STANDART[opIndex].o.numberOfParameters == numberOfParameters)
+                            thisIstheRightFunction = true;
                         else
-                            previousTokenType = getLastTokenType(orderArray.get(j + 1), objVars);
-                    }
-
-                    int previousSize = orderArray.size();
-                    int newOperatorIndex = ops.size() - 1;
-                    int currentSize = previousSize;
-                    Operator.OpWithPriority chosen = null;
-                    do {
-                        processNextCharacter(expression, objVars, objOps);
-                        if (orderArray.size() != currentSize) {
-                            currentSize++;
-                            if (orderArray.get(orderArray.size() - 1) == TokenType.OPERATOR) {
-                                if ((ops.get(ops.size() - 1).p >= Operator.STANDART[opIndex].p))
-                                    break;
-                                else if ((chosen == null) || (chosen.p < ops.get(ops.size() - 1).p))
-                                    chosen = ops.get(ops.size() - 1);
-                            }
-                        }
-                    } while (i < expression.length());
-
-                    Type nextTokenType;
-                    if (chosen == null)
-                        nextTokenType = getLastTokenType(orderArray.get(previousSize), objVars);
-                    else
-                        nextTokenType = chosen.o.returnType;
-                    
-                    boolean thisIstheRightFunction;
-                    
-                    do {
-                        thisIstheRightFunction = true;
-                        if (isUnary) {
-                            if ((Operator.STANDART[opIndex].o.numberOfParameters != 1) || 
-                                    (Operator.STANDART[opIndex].o.parType[0] != previousTokenType)) {
-                                thisIstheRightFunction = false;
-                                opIndex ++;
-                            }
-                        } else {
-                            if ((Operator.STANDART[opIndex].o.numberOfParameters != 2) || 
-                                    (Operator.STANDART[opIndex].o.parType[0] != previousTokenType) || 
-                                    (Operator.STANDART[opIndex].o.parType[1] != nextTokenType)) {
-                                thisIstheRightFunction = false;
-                                opIndex ++;
-                            }
-                        }
+                            opIndex++;
                     } while (!thisIstheRightFunction);
-                    ops.set(newOperatorIndex, Operator.STANDART[opIndex]);
+                    ops.add(opIndex);
                     break;
                 }
                 case VARIABLE: {
@@ -504,41 +322,188 @@ public class Expression {
                             vars.add(getIndex(objVars, str));
                         } else {
                             orderArray.add(TokenType.FUNCTION);
-                            int tokensCount = -orderArray.size();
-                            do {
-                                processNextCharacter(expression, objVars, objOps);
-                            } while ((i < expression.length()) && (currentT == TokenType.TOKEN));
                             int funcIndex = getIndex(objOps, str);
-                            Operator[] funcArray;
-                            if (funcIndex == -1) {
-                                funcIndex = getIndex(Operator.STANDART_F, str);
-                                funcArray = Operator.STANDART_F;
-                            } else
-                                funcArray = objOps;
-
-                            boolean thisIstheRightFunction;
-                            tokensCount += orderArray.size();
-                            do {
-                                thisIstheRightFunction = true;
-                                if (funcArray[funcIndex].numberOfParameters != tokensCount) {
-                                    funcIndex++;
-                                    thisIstheRightFunction = false;
-                                } else {
-                                    for (int j = tokensCount; j > 0; j--) {
-                                        if (tokens.get(tokens.size() - j).getTypeAndMakePostfix(objVars) != funcArray[funcIndex].parType[tokensCount - j]) {
-                                            funcIndex++;
-                                            thisIstheRightFunction = false;
-                                            break;
-                                        }
-                                    }
-                                }
-                            } while (!thisIstheRightFunction);
-                            funcs.add(funcArray[funcIndex]);
+                            if (funcIndex == -1)
+                                funcs.add(new IndexedPair<>(Operator.STANDART_F, getIndex(Operator.STANDART_F, str)));
+                            else
+                                funcs.add(new IndexedPair<>(objOps, funcIndex));
                         }
                     }
                     break;
                 }
             }
+        }
+
+
+        private Type getTypeAndMakePostfix(Variable[] objVars) {
+            if (returnType != null)
+                return returnType;
+            else if (orderArray.isEmpty())
+                return null;
+            int operatorsTotal = ops.size() + funcs.size();
+            int constantsTotal = constants.size();
+            int variableTotal = vars.size();
+            for (Tokenizer t: tokens) {
+                operatorsTotal += t.operatorsFinal.length;
+                constantsTotal += t.constantsFinal.length;
+                variableTotal += t.varsFinal.length;
+            }
+            varsFinal = new IndexedPair[variableTotal];
+            operatorsFinal = new Operator[operatorsTotal];
+            constantsFinal = new IndexedPair[constantsTotal];
+
+            Stack<Integer> opStack = new Stack<>();
+            int j = 0;
+            int constI = 0;
+            int opI = 0;
+            int varI = 0;
+            int funcI = 0;
+            int tokI = 0;
+
+            int opFinalI = 0;
+            int varFinalI = 0;
+            int constFinalI = 0;
+
+            boolean unaryOperatorMet = false;
+            int tokensBeforeFunction = -1;
+            Operator function = null;
+
+            Type lastTypeMet = null;
+            Type typeBeforeTheLast = null;
+
+            //Order of the constants
+
+            while (j < orderArray.size()) {
+                switch (orderArray.get(j)) {
+                    case CONSTANT: {
+                        constantsFinal[constFinalI] = new IndexedPair<>(constants.get(constI ++), constFinalI + varFinalI + opFinalI);
+                        constFinalI++;
+                        typeBeforeTheLast = lastTypeMet;
+                        lastTypeMet = constantsFinal[constFinalI - 1].o.type;
+                        if (unaryOperatorMet) {
+                            operatorsFinal[opFinalI++] = Operator.STANDART[chooseCorrectOperator(opStack.pop(), lastTypeMet, null)].o;
+                            unaryOperatorMet = false;
+                        }
+                        break;
+                    }
+                    case OPERATOR: {
+                        int nextOperator = ops.get(opI++);
+                        while ((!opStack.isEmpty())&&(Operator.STANDART[nextOperator].p >= Operator.STANDART[opStack.peek()].p)) {
+                            operatorsFinal[opFinalI++] = Operator.STANDART[chooseCorrectOperator(opStack.pop(), lastTypeMet, typeBeforeTheLast)].o;
+                            typeBeforeTheLast = lastTypeMet;
+                            lastTypeMet = operatorsFinal[opFinalI - 1].returnType;
+                        }
+                        opStack.push(nextOperator);
+                        if (Operator.STANDART[nextOperator].o.numberOfParameters == 1)
+                            unaryOperatorMet = true;
+                        break;
+                    }
+                    case VARIABLE: {
+                        varsFinal[varFinalI] = new IndexedPair<>(vars.get(varI ++), constFinalI + varFinalI + opFinalI);
+                        varFinalI++;
+                        typeBeforeTheLast = lastTypeMet;
+                        lastTypeMet = objVars[varsFinal[varFinalI - 1].o].type;
+                        if (unaryOperatorMet) {
+                            operatorsFinal[opFinalI++] = Operator.STANDART[chooseCorrectOperator(opStack.pop(), lastTypeMet, null)].o;
+                            unaryOperatorMet = false;
+                        }
+                        break;
+                    }
+                    case FUNCTION: {
+                        chooseCorrectFunction(funcI, j, tokI, objVars);
+                        function = funcs.get(funcI).o[funcs.get(funcI).p];
+                        funcI++;
+                        tokensBeforeFunction = function.numberOfParameters;
+                        break;
+                    }
+                    case TOKEN: {
+                        Tokenizer thisToken = tokens.get(tokI++);
+                        typeBeforeTheLast = lastTypeMet;
+                        lastTypeMet = thisToken.getTypeAndMakePostfix(objVars);
+                        int lastIndex = varFinalI + constFinalI + opFinalI;
+                        for (Operator o: thisToken.operatorsFinal)
+                            operatorsFinal[opFinalI ++] = o;
+                        for (IndexedPair<Integer> i: thisToken.varsFinal)
+                            varsFinal[varFinalI ++] = new IndexedPair<>(i.o, i.p + lastIndex);
+                        for (IndexedPair<Variable> i: thisToken.constantsFinal)
+                            constantsFinal[constFinalI ++] = new IndexedPair<>(i.o, i.p + lastIndex);
+                        if (tokensBeforeFunction > -1) {
+                            tokensBeforeFunction --;
+                            if (tokensBeforeFunction == 0) {
+                                operatorsFinal[opFinalI ++] = function;
+                                typeBeforeTheLast = lastTypeMet;
+                                lastTypeMet = function.returnType;
+                                tokensBeforeFunction = -1;
+                                if (unaryOperatorMet) {
+                                    operatorsFinal[opFinalI++] = Operator.STANDART[chooseCorrectOperator(opStack.pop(), lastTypeMet, null)].o;
+                                    unaryOperatorMet = false;
+                                }
+                            }
+                        } else if (unaryOperatorMet) {
+                            operatorsFinal[opFinalI++] = Operator.STANDART[chooseCorrectOperator(opStack.pop(), lastTypeMet, null)].o;
+                            unaryOperatorMet = false;
+                        }
+                        break;
+                    }
+                }
+                j++;
+            }
+            while (!opStack.isEmpty()) {
+                operatorsFinal[opFinalI++] = Operator.STANDART[chooseCorrectOperator(opStack.pop(), lastTypeMet, typeBeforeTheLast)].o;
+                typeBeforeTheLast = lastTypeMet;
+                lastTypeMet = operatorsFinal[opFinalI - 1].returnType;
+            }
+            if (operatorsTotal == 0) {
+                if (constantsTotal == 0)
+                    returnType = objVars[varsFinal[0].o].type;
+                else
+                    returnType = constantsFinal[0].o.type;
+            } else
+                returnType = operatorsFinal[operatorsTotal -1].returnType;
+            return returnType;
+        }
+
+
+        private int chooseCorrectOperator(int opIndex, Type par1Type, Type par2Type) {
+            //TODo check name
+            boolean thisIstheRightOperator = false;
+            do {
+                if ((Operator.STANDART[opIndex].o.parType[0] == par1Type) && ((par2Type == null) ||
+                        (Operator.STANDART[opIndex].o.parType[1] == par2Type)))
+                        thisIstheRightOperator = true;
+                else
+                    opIndex++;
+            } while (!thisIstheRightOperator);
+            return opIndex;
+        }
+
+
+        private void chooseCorrectFunction(int index, int typeIndex, int tokenIndex, Variable objVars[]) {
+            //TODO check name
+            int tokensCount = 0;
+            while ((typeIndex + tokensCount + 1 < orderArray.size())&&(orderArray.get(typeIndex + tokensCount + 1) == TokenType.TOKEN))
+                tokensCount++;
+            if ((tokensCount == 1) && (tokens.get(tokenIndex - 1).getTypeAndMakePostfix(objVars) == null))
+                tokensCount = 0;
+            boolean thisIstheRightFunction = false;
+            Operator[] funcArray = funcs.get(index).o;
+            int funcIndex = funcs.get(index).p;
+            do {
+                if (funcArray[funcIndex].numberOfParameters != tokensCount)
+                    funcIndex++;
+                else {
+                    int j;
+                    for (j = 0; j < tokensCount; j++) {
+                        if (tokens.get(tokenIndex + j).getTypeAndMakePostfix(objVars) != funcArray[funcIndex].parType[j]) {
+                            funcIndex++;
+                            break;
+                        }
+                    }
+                    if (j == tokensCount)
+                        thisIstheRightFunction = true;
+                }
+            } while (!thisIstheRightFunction);
+            funcs.set(index, new IndexedPair<>(funcArray, funcIndex));
         }
 
 
@@ -551,11 +516,11 @@ public class Expression {
             for (TokenType t: orderArray) {
                 switch (t) {
                     case CONSTANT: {
-                        System.out.println(begin + "CONSTANT: "+ constants.get(constI++));
+                        System.out.println(begin + "CONSTANT: "+ constants.get(constI++).value);
                         break;
                     }
                     case OPERATOR: {
-                        System.out.println(begin + "OPERATOR: "+ ops.get(opI++).getName());
+                        System.out.println(begin + "OPERATOR: "+ Operator.STANDART[ops.get(opI++)].getName());
                         break;
                     }
                     case VARIABLE: {
@@ -563,7 +528,8 @@ public class Expression {
                         break;
                     }
                     case FUNCTION: {
-                        System.out.println(begin + "FUNCTION: "+funcs.get(funcI++).getName());
+                        System.out.println(begin + "FUNCTION: "+funcs.get(funcI).o[funcs.get(funcI).p].getName());
+                        funcI++;
                         break;
                     }
                     case TOKEN: {
@@ -577,6 +543,7 @@ public class Expression {
 
     }
 
+
     /**
      * All the possible types of tokens described in the javadoc for the Tokens class.
      */
@@ -587,6 +554,7 @@ public class Expression {
         OPERATOR,
         FUNCTION;
     }
+
 
     private class IndexedPair<T> {
         private final T o; //object
@@ -601,12 +569,17 @@ public class Expression {
 
     public static void main(String[] pars) {
         Variable[] vars = new Variable[] {new Variable("PI", Type.INTEGER, "3"),
-                                        new Variable("i", Type.BOOLEAN, "True")};
+                                        new Variable("i", Type.BOOLEAN, "true")};
         Operator[] ops = new Operator[] {new Operator("kek", 2, Type.BOOLEAN, new  Type[] {Type.INTEGER, Type.INTEGER},
                 (a, b) -> String.valueOf(Integer.parseInt(b[0]) == 2 * Integer.parseInt(b[1])))};
-        String intro = "(kek(PI - 2^ (7+1), 6) == i) || (\"kukare)ku\" + \"he(h\" == \"FGH\")";
+        String intro = "(kek(PI - -3, min(3,4)) == i) || (\"kukare)ku\" + \"he(h\" == \"FGH\")";
+        //String intro = "-(2 + 3)^(PI-2)/2";
         Expression example = new Expression(intro, ops, vars);
         GameObject shell = new GameObject(vars);
+        System.out.println("Result: "+ example.evaluate(shell));
+        vars[0].value = "4";
+        System.out.println("Result: "+ example.evaluate(shell));
+        vars[1].value = "false";
         System.out.println("Result: "+ example.evaluate(shell));
     }
 }

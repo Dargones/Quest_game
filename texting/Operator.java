@@ -10,6 +10,7 @@ public class Operator implements Named, Comparable<Operator>{
     //indexed by the priority value.
     //NOTE: Two operators that have teh same name and the same number of argumnets (i.e. those of them, whoch are
     // both unary or both binary) should have the same priority.
+    //NOTE2: Unary operators shpuld have lower priority then the binary operators
     public static final Operator STANDART_F[]; //operators that should be used with prefix notation
     public final int numberOfParameters;
     public final Type returnType;
@@ -18,7 +19,7 @@ public class Operator implements Named, Comparable<Operator>{
     private final String name;
 
     static {
-        STANDART = new OpWithPriority[13];
+        STANDART = new OpWithPriority[14];
         STANDART[0] = new OpWithPriority( new Operator("+",2, Type.INTEGER, new Type[] {Type.INTEGER, Type.INTEGER},
                 (a, b) -> String.valueOf(Integer.parseInt(b[0]) + Integer.parseInt(b[1]))), 3);
         STANDART[1] = new OpWithPriority( new Operator("-",2, Type.INTEGER, new Type[] {Type.INTEGER, Type.INTEGER},
@@ -30,18 +31,20 @@ public class Operator implements Named, Comparable<Operator>{
         STANDART[4] = new OpWithPriority( new Operator("/",2, Type.INTEGER, new Type[] {Type.INTEGER, Type.INTEGER},
                 (a, b) -> String.valueOf(Integer.parseInt(b[0]) / Integer.parseInt(b[1]))), 2);
         STANDART[5] = new OpWithPriority( new Operator("^",2, Type.INTEGER, new Type[] {Type.INTEGER, Type.INTEGER},
-                (a, b) -> String.valueOf(Math.pow(Integer.parseInt(b[0]), Integer.parseInt(b[1])))), 1);
+                (a, b) -> String.valueOf((int)Math.pow(Integer.parseInt(b[0]), Integer.parseInt(b[1])))), 1);
         STANDART[6] = new OpWithPriority( new Operator("==",2, Type.BOOLEAN, new Type[] {Type.INTEGER, Type.INTEGER},
                 (a, b) -> String.valueOf(Integer.parseInt(b[0])==Integer.parseInt(b[1]))), 5);
+        STANDART[13] = new OpWithPriority( new Operator("/",2, Type.INTEGER, new Type[] {Type.INTEGER, Type.INTEGER},
+                (a, b) -> String.valueOf(Integer.parseInt(b[0]) % Integer.parseInt(b[1]))), 2);
 
         STANDART[7] = new OpWithPriority( new Operator("||",2, Type.BOOLEAN, new Type[] {Type.BOOLEAN, Type.BOOLEAN},
-                (a, b) -> String.valueOf(Boolean.getBoolean(b[0])||Boolean.getBoolean(b[1]))), 5);
+                (a, b) -> String.valueOf(Boolean.valueOf(b[0])||Boolean.valueOf(b[1]))), 5);
         STANDART[8] = new OpWithPriority( new Operator("&&",2, Type.BOOLEAN, new Type[] {Type.BOOLEAN, Type.BOOLEAN},
-                (a, b) -> String.valueOf(Boolean.getBoolean(b[0])&&Boolean.getBoolean(b[1]))), 4);
+                (a, b) -> String.valueOf(Boolean.valueOf(b[0])&&Boolean.valueOf(b[1]))), 4);
         STANDART[9] = new OpWithPriority( new Operator("==",2, Type.BOOLEAN, new Type[] {Type.BOOLEAN, Type.BOOLEAN},
-                (a, b) -> String.valueOf(Boolean.getBoolean(b[0])==Boolean.getBoolean(b[1]))), 4);
+                (a, b) -> String.valueOf(Boolean.valueOf(b[0])==Boolean.valueOf(b[1]))), 4);
         STANDART[10] = new OpWithPriority( new Operator("!",2, Type.BOOLEAN, new Type[] {Type.BOOLEAN},
-                (a, b) -> String.valueOf(!Boolean.getBoolean(b[0]))), 0);
+                (a, b) -> String.valueOf(!Boolean.valueOf(b[0]))), 0);
 
         STANDART[11] = new OpWithPriority( new Operator("+",2, Type.STRING, new Type[] {Type.STRING, Type.STRING},
                 (a, b) -> b[0] + b[1]), 3);
