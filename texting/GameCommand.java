@@ -24,7 +24,7 @@ public class GameCommand {
     }
 
     public GameCommand next() {
-        switch (type) {
+        /*switch (type) {
             case SETTING: {
                 Expression expr = new Expression(str);
                 for (int i = 1; i < variables.length; i++) {
@@ -47,10 +47,11 @@ public class GameCommand {
             }
             default:
                 return null;
-        }
+        }*/
+        return null;
     }
 
-    private enum Type {
+    protected enum Type {
         POSITION(10),
         ACTION(1),
         SETTING(1),
@@ -58,7 +59,7 @@ public class GameCommand {
 
         public final int maxEdges;
 
-        GameCommandType(int maxEdges) {
+        Type(int maxEdges) {
             this.maxEdges = maxEdges;
         }
     }

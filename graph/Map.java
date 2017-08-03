@@ -133,8 +133,6 @@ public class Map {
         home = s[Integer.parseInt(lines[i])];
         tempSector = null;
         mergedSectors = null;
-        //TODO delete the following line
-        displacement(2,2);
 
         somethingMoved = true;
     }

@@ -6,6 +6,5 @@ package texting;
 public enum Type {
     INTEGER,
     STRING,
-    BOOLEAN,
-    DOUBLE;
+    BOOLEAN;
 }

@@ -3,7 +3,7 @@ package texting;
 /**
  * Created by alexanderfedchin on 7/18/17.
  */
-public class Variable implements Token {
+public class Variable implements Named {
     public String value;
     public final Type type;
     private final String name;
