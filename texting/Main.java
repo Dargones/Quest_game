@@ -19,7 +19,7 @@ public class Main extends JFrame {
         super();
         Dimension d = new Dimension(1440, 800);
         this.setTitle("The_World");
-        this.add(new GameShell(d, new GameObject(null)));
+        this.add(new GameShell(d, new GameObject("script.txt")));
         this.pack();
         this.setResizable(false);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);

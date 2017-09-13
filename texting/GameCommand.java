@@ -1,45 +1,49 @@
 package texting;
 
 
-import java.math.BigDecimal;
 
 /**
  * Created by alexanderfedchin on 7/18/17.
  */
 public class GameCommand {
     public GameCommand.Type type;
-    public String str;
+    public Expression expr;
     public GameCommand[] edges;
-    private Variable[] variables;
+    public int varToSet;
 
     public GameCommand() {
-        set(null, null, null, null);
+
     }
 
-    public void set(GameCommand.Type type, String str, GameCommand[] edges, Variable[] variables) {
-        this.variables = variables;
+    public void set(GameCommand.Type type, String str, GameCommand[] edges, Operator[] operators, Variable[] variables) {
         this.type = type;
-        this.str = str;
         this.edges = edges;
+        if (type == Type.SETTING) {
+            int i = 0;
+            while (str.charAt(i) == ' ')
+                i++;
+            int startIndex = i;
+            while ((str.charAt(i) != '=') && (str.charAt(i) != ' '))
+                i++;
+            varToSet = Tokenizer.getIndex(variables, str.substring(startIndex, i));
+            while ((str.charAt(i) == ' ') || (str.charAt(i) == '='))
+                i++;
+            this.expr = new Expression(str.substring(i), operators, variables);
+        } else {
+            this.expr = new Expression(str, operators, variables);
+            varToSet = -1;
+        }
     }
 
-    public GameCommand next() {
-        /*switch (type) {
+    public GameCommand next(GameObject obj) {
+        switch (type) {
             case SETTING: {
-                Expression expr = new Expression(str);
-                for (int i = 1; i < variables.length; i++) {
-                    expr = expr.with(variables[i].name, variables[i].value);
-                }
-                variables[0].value = expr.eval();
+                obj.variables[varToSet].value = expr.evaluate(obj);
             }
             case ACTION:
                 return edges[0];
             case CONDITION: {
-                Expression expr = new Expression(str);
-                for (int i = 0; i < variables.length; i++) {
-                    expr = expr.with(variables[i].name, variables[i].value);
-                }
-                if (expr.eval().equals(new BigDecimal(0))) {
+                if (!expr.evaluateCondition(obj)) {
                     if (edges.length > 1)
                         return edges[1];
                 } else
@@ -47,20 +51,21 @@ public class GameCommand {
             }
             default:
                 return null;
-        }*/
-        return null;
+        }
     }
 
     protected enum Type {
-        POSITION(10),
-        ACTION(1),
-        SETTING(1),
-        CONDITION(2);
+        POSITION(10, "position"),
+        ACTION(1, "action"),
+        SETTING(1, "setting"),
+        CONDITION(2, "condition");
 
+        public final String name;
         public final int maxEdges;
 
-        Type(int maxEdges) {
+        Type(int maxEdges, String name) {
             this.maxEdges = maxEdges;
+            this.name = name;
         }
     }
 

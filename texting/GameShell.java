@@ -3,6 +3,7 @@ package texting;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 
 /**
  * Created by alexanderfedchin on 7/16/17.
@@ -11,8 +12,8 @@ import java.awt.event.KeyEvent;
  */
 public class GameShell extends JPanel {
     GameObject textSource; //the current gameObject that this GameShell is focused on.
-    TextArea text; //the content of teh text field
-    TextArea actionList; //the content of the actionList
+    JTextArea text; //the content of teh text field
+    JTextArea actionList; //the content of the actionList
     TextField input; //the input field (edited by teh user)
 
     public GameShell(Dimension dimension, GameObject textSource) {
@@ -22,12 +23,13 @@ public class GameShell extends JPanel {
         setPreferredSize(dimension);
         setFocusable(true);
         this.setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
-        text = new TextArea();
+        text = new JTextArea();
         text.setFont(new Font("ZapfDingbats", Font.PLAIN, 30));
         text.setFocusable(false);
-        actionList = new TextArea();
+        text.setLineWrap(true);
+        actionList = new JTextArea();
         actionList.setFont(new Font("ZapfDingbats", Font.PLAIN, 30));
-        actionList.setFocusable(false);
+        //actionList.setFocusable(false);
         input = new TextField();
         input.setFont(new Font("ZapfDingbats", Font.PLAIN, 30));
         input.addKeyListener(new java.awt.event.KeyListener() {
@@ -44,7 +46,12 @@ public class GameShell extends JPanel {
                     textSource.act(input.getText());
                     if (textSource.getStateChanged()) {
                         text.setText(textSource.getText());
-                        actionList.setText(textSource.getActions());
+                        ArrayList<String> actions = textSource.getActions();
+                        String tmp = "";
+                        if (actions != null)
+                            for (int i = 0; i < actions.size(); i ++)
+                                tmp += i+" -> "+actions.get(i) + '\n';
+                        actionList.setText(tmp);
                         textSource.setStateChanged(false);
                     }
                 }
@@ -56,7 +63,12 @@ public class GameShell extends JPanel {
             }
         });
         text.setText(textSource.getText());
-        actionList.setText(textSource.getActions());
+        ArrayList<String> actions = textSource.getActions();
+        String tmp = "";
+        if (actions != null)
+            for (int i = 0; i < actions.size(); i ++)
+                tmp += i+" -> "+actions.get(i) + '\n';
+        actionList.setText(tmp);
         this.add(text);
         this.add(actionList);
         this.add(input);
